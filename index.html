@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>台股個股技術面與防守決策儀表板</title>
+  <title>個股技術面手動試算與決策儀表板</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -11,75 +11,102 @@
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --accent: #38bdf8;
-      --red: #ef4444;    /* 台股漲 / 偏空警示 */
-      --green: #22c55e;  /* 台股跌 / 支撐有守 */
+      --red: #ef4444;    /* 偏空警示 */
+      --green: #22c55e;  /* 支撐有守 */
       --border: #334155;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 24px; display: flex; justify-content: center; }
+    body { background: var(--bg); color: var(--text); padding: 24px; display: flex; justify-content: center; line-height: 1.5; }
     .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
     header h1 { font-size: 1.5rem; margin-bottom: 6px; color: var(--accent); }
     header p { color: var(--text-muted); font-size: 0.9rem; }
     
-    .search-box { display: flex; gap: 10px; background: var(--card-bg); padding: 14px; border-radius: 12px; border: 1px solid var(--border); }
-    input { flex: 1; background: #0f172a; border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 1rem; }
+    /* 手動輸入區塊樣式 */
+    .input-section { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+    .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-group label { font-size: 0.85rem; color: var(--text-muted); }
+    input { background: #0f172a; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 8px; font-size: 1rem; }
     input:focus { outline: none; border-color: var(--accent); }
-    button { background: var(--accent); color: #0f172a; font-weight: 600; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    button { width: 100%; background: var(--accent); color: #0f172a; font-weight: 600; font-size: 1rem; border: none; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
     button:hover { opacity: 0.9; }
 
+    /* 結果顯示區塊樣式 */
     .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
     .metric-card { background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--border); }
     .metric-card .title { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
-    .metric-card .value { font-size: 1.4rem; font-weight: bold; }
+    .metric-card .value { font-size: 1.4rem; font-weight: bold; color: #fff; }
     .metric-card .sub { font-size: 0.75rem; margin-top: 4px; }
 
     .decision-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 20px; }
     .decision-card h2 { font-size: 1.1rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-    .tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+    .tag { font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
     .tag-bear { background: rgba(239, 68, 68, 0.2); color: var(--red); }
     .tag-bull { background: rgba(34, 197, 94, 0.2); color: var(--green); }
 
     .strategy-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .strategy-list li { padding: 12px; background: rgba(15, 23, 42, 0.6); border-left: 4px solid var(--accent); border-radius: 4px; font-size: 0.9rem; line-height: 1.5; }
-    .strategy-list li strong { color: var(--accent); }
-    .status-text { color: var(--text-muted); font-size: 0.85rem; text-align: center; }
+    .strategy-list li { padding: 14px; background: rgba(15, 23, 42, 0.6); border-left: 4px solid var(--accent); border-radius: 4px; font-size: 0.95rem; }
+    .strategy-list li strong { color: var(--accent); display: block; margin-bottom: 4px; font-size: 1rem; }
   </style>
 </head>
 <body>
 
 <div class="container">
   <header>
-    <h1>個股支撐位階與進場策略監控儀表板</h1>
-    <p>輸入台股代號，快速試算均線位階（5MA / 20MA / 60MA）與具體分批操作建議</p>
+    <h1>個股技術面手動試算儀表板</h1>
+    <p>輸入看盤軟體上的現價與均線數值，自動幫您推算防守距離與進場策略。</p>
   </header>
 
-  <div class="search-box">
-    <input type="text" id="stockId" placeholder="輸入股票代號（例如：2330、2454、0050）" value="2330">
-    <button onclick="analyzeStock()">開始分析</button>
+  <!-- 手動輸入區塊 -->
+  <div class="input-section">
+    <div class="input-grid">
+      <div class="input-group">
+        <label>股票名稱或代號</label>
+        <input type="text" id="stockName" value="台積電 (預設範例)">
+      </div>
+      <div class="input-group">
+        <label>最新收盤價 / 現價</label>
+        <input type="number" id="price" step="0.01" value="2420">
+      </div>
+      <div class="input-group">
+        <label>5日均線 (5MA)</label>
+        <input type="number" id="ma5" step="0.01" value="2531">
+      </div>
+      <div class="input-group">
+        <label>20日均線 (20MA)</label>
+        <input type="number" id="ma20" step="0.01" value="2486">
+      </div>
+      <div class="input-group">
+        <label>60日均線 (季線 60MA)</label>
+        <input type="number" id="ma60" step="0.01" value="2414">
+      </div>
+    </div>
+    <button onclick="analyzeStock()">計算並產生策略建議</button>
   </div>
 
-  <div id="resultArea" style="display: none; display: flex; flex-direction: column; gap: 20px;">
+  <!-- 結果顯示區塊 (預設隱藏，點擊按鈕後顯示) -->
+  <div id="resultArea" style="display: none; flex-direction: column; gap: 20px;">
     <!-- 核心數據 -->
     <div class="grid-metrics">
       <div class="metric-card">
-        <div class="title">當前收盤 / 現價</div>
-        <div class="value" id="curPrice">--</div>
-        <div class="sub" id="priceStatus">--</div>
+        <div class="title">您分析的標的</div>
+        <div class="value" id="resName">--</div>
+        <div class="sub" id="resPrice">現價：--</div>
       </div>
       <div class="metric-card">
-        <div class="title">5 日均線 (週線)</div>
-        <div class="value" id="ma5">--</div>
-        <div class="sub" id="ma5Diff">--</div>
+        <div class="title">與 5MA 短線距離</div>
+        <div class="value" id="ma5DiffValue">--</div>
+        <div class="sub" id="ma5DiffPct">乖離率：--</div>
       </div>
       <div class="metric-card">
-        <div class="title">20 日均線 (月線)</div>
-        <div class="value" id="ma20">--</div>
-        <div class="sub" id="ma20Diff">--</div>
+        <div class="title">與 20MA 月線距離</div>
+        <div class="value" id="ma20DiffValue">--</div>
+        <div class="sub" id="ma20DiffPct">乖離率：--</div>
       </div>
       <div class="metric-card">
-        <div class="title">60 日均線 (季線支撐)</div>
-        <div class="value" id="ma60">--</div>
-        <div class="sub" id="ma60Diff">--</div>
+        <div class="title">與 60MA 季線距離</div>
+        <div class="value" id="ma60DiffValue">--</div>
+        <div class="sub" id="ma60DiffPct">乖離率：--</div>
       </div>
     </div>
 
@@ -92,107 +119,105 @@
     </div>
   </div>
 
-  <div id="loading" class="status-text">請輸入代號並點擊「開始分析」</div>
 </div>
 
 <script>
-  // 模擬數據字典（若串接公開 API，可直接替換為 fetch 請求）
-  const mockDatabase = {
-    "2330": { name: "台積電", price: 2420, ma5: 2531, ma20: 2486, ma60: 2414, high: 2590 },
-    "2454": { name: "聯發科", price: 1310, ma5: 1330, ma20: 1350, ma60: 1290, high: 1400 },
-    "0050": { name: "元大台灣50", price: 198.5, ma5: 202.0, ma20: 200.5, ma60: 196.0, high: 206.5 }
-  };
+  function analyzeStock() {
+    // 取得使用者輸入的數值，並轉換為數字格式
+    const name = document.getElementById('stockName').value.trim() || '未命名標的';
+    const price = parseFloat(document.getElementById('price').value);
+    const ma5 = parseFloat(document.getElementById('ma5').value);
+    const ma20 = parseFloat(document.getElementById('ma20').value);
+    const ma60 = parseFloat(document.getElementById('ma60').value);
 
-  async function analyzeStock() {
-    const code = document.getElementById('stockId').value.trim();
-    const loading = document.getElementById('loading');
-    const resultArea = document.getElementById('resultArea');
-
-    if (!code) {
-      alert("請輸入股票代號");
+    // 簡單的防呆檢查
+    if (isNaN(price) || isNaN(ma5) || isNaN(ma20) || isNaN(ma60)) {
+      alert("請確保所有價格與均線欄位都已填寫正確的數字！");
       return;
     }
 
-    loading.innerText = "資料計算中...";
+    // 計算與均線的差距與乖離率 (%)
+    const diff5 = price - ma5;
+    const diff20 = price - ma20;
+    const diff60 = price - ma60;
     
-    // 優先讀取模擬/即時數據
-    let data = mockDatabase[code];
-    
-    // 若非預設個股，則依比例動態生成合理計算模型
-    if (!data) {
-      const base = 100 + (parseInt(code) % 500);
-      data = {
-        name: `個股 (${code})`,
-        price: base,
-        ma5: +(base * 1.02).toFixed(1),
-        ma20: +(base * 1.01).toFixed(1),
-        ma60: +(base * 0.98).toFixed(1),
-        high: +(base * 1.08).toFixed(1)
-      };
-    }
+    const pct5 = ((diff5 / ma5) * 100).toFixed(2);
+    const pct20 = ((diff20 / ma20) * 100).toFixed(2);
+    const pct60 = ((diff60 / ma60) * 100).toFixed(2);
 
-    renderDashboard(data);
-    loading.innerText = `最後更新時間：${new Date().toLocaleTimeString('zh-TW')}`;
-    resultArea.style.display = "flex";
-  }
+    // 將結果填入畫面
+    document.getElementById('resName').innerText = name;
+    document.getElementById('resPrice').innerText = `現價：${price}`;
 
-  function renderDashboard(d) {
-    document.getElementById('curPrice').innerText = `${d.price} 元`;
-    document.getElementById('ma5').innerText = `${d.ma5} 元`;
-    document.getElementById('ma20').innerText = `${d.ma20} 元`;
-    document.getElementById('ma60').innerText = `${d.ma60} 元`;
+    document.getElementById('ma5DiffValue').innerText = diff5 > 0 ? `+${diff5.toFixed(2)}` : diff5.toFixed(2);
+    document.getElementById('ma5DiffValue').style.color = diff5 > 0 ? "var(--red)" : "var(--green)"; // 台灣習慣：紅漲綠跌
+    document.getElementById('ma5DiffPct').innerText = `乖離率：${pct5}%`;
 
-    const distMa60 = (((d.price - d.ma60) / d.ma60) * 100).toFixed(2);
-    const distMa5 = (((d.price - d.ma5) / d.ma5) * 100).toFixed(2);
+    document.getElementById('ma20DiffValue').innerText = diff20 > 0 ? `+${diff20.toFixed(2)}` : diff20.toFixed(2);
+    document.getElementById('ma20DiffValue').style.color = diff20 > 0 ? "var(--red)" : "var(--green)";
+    document.getElementById('ma20DiffPct').innerText = `乖離率：${pct20}%`;
 
-    document.getElementById('priceStatus').innerText = `${d.name}`;
-    document.getElementById('ma5Diff').innerText = `短線乖離：${distMa5}%`;
-    document.getElementById('ma20Diff').innerText = `月線差距：${(d.price - d.ma20).toFixed(1)} 元`;
-    document.getElementById('ma60Diff').innerText = `距季線：${(d.price - d.ma60).toFixed(1)} 元 (${distMa60}%)`;
+    document.getElementById('ma60DiffValue').innerText = diff60 > 0 ? `+${diff60.toFixed(2)}` : diff60.toFixed(2);
+    document.getElementById('ma60DiffValue').style.color = diff60 > 0 ? "var(--red)" : "var(--green)";
+    document.getElementById('ma60DiffPct').innerText = `距季線：${pct60}%`;
 
-    // 決策邏輯推算
+    // --- 產生策略建議邏輯 ---
     const tag = document.getElementById('statusTag');
     const adviceList = document.getElementById('strategyAdvice');
     adviceList.innerHTML = '';
 
-    const isNearMa60 = Math.abs(distMa60) <= 1.5;
-    const isBelowMa5 = d.price < d.ma5;
+    const isNearMa60 = Math.abs(pct60) <= 2.0; // 差距在正負 2% 內視為季線保衛戰
+    const isBelowMa60 = price < ma60;
+    const isBelowMa5 = price < ma5;
+    const isBelowMa20 = price < ma20;
 
-    if (d.price < d.ma60) {
+    // 1. 決定標籤狀態
+    if (isBelowMa60 && !isNearMa60) {
       tag.className = 'tag tag-bear';
-      tag.innerText = '跌破季線 (保守觀望)';
+      tag.innerText = '跌破季線 (中長線轉弱)';
     } else if (isNearMa60) {
       tag.className = 'tag tag-bear';
-      tag.innerText = '季線保衛戰 (左側試探)';
+      tag.innerText = '季線保衛戰 (關鍵轉折區)';
+    } else if (!isBelowMa60 && isBelowMa20) {
+      tag.className = 'tag tag-bear';
+      tag.innerText = '跌破月線 (短線回檔中)';
     } else {
       tag.className = 'tag tag-bull';
-      tag.innerText = '多方支撐之上';
+      tag.innerText = '多方架構 (均線之上)';
     }
 
-    // 具體策略建議生成
+    // 2. 組合建議清單
     const advice = [];
+
+    // 季線位階判斷
     if (isNearMa60) {
-      advice.push(`<strong>左側試探掛單：</strong> 目前股價接近季線（約 ${d.ma60} 元），距離僅約 ${Math.abs(d.price - d.ma60).toFixed(1)} 元。偏好逢低布局者可在此區間投入第一批資金（約 20%~30%），嚴禁一次打滿。`);
-      advice.push(`<strong>防守停損設定：</strong> 以連續 2 日收盤跌破季線以下 1.5%～2%（約 ${(d.ma60 * 0.98).toFixed(1)} 元）為嚴格防守標準，若失守需控制風險或暫緩加碼。`);
-    } else if (d.price < d.ma60) {
-      advice.push(`<strong>深層支撐等待：</strong> 價格已落在季線之下，技術面下行慣性未止，建議等待下檔前波整理平台再做評估，不宜躁進摸底。`);
+      advice.push(`<strong>⚠️ 左側試探防守區：</strong> 目前股價極度靠近季線（${ma60}）。季線是中長線主力成本區，若想逢低佈局，可在此處試單第一筆資金（20%~30%）。`);
+      
+      const stopLoss = (ma60 * 0.98).toFixed(2);
+      advice.push(`<strong>🛡️ 嚴格停損設定：</strong> 請以收盤價跌破季線往下 2%（約 ${stopLoss}）為防線。若連續兩日收盤低於此價位，代表季線實質跌破，請果斷減碼以防長線套牢。`);
+    } else if (isBelowMa60) {
+      advice.push(`<strong>📉 季線失守觀望：</strong> 現價已明顯跌破季線支撐，技術面呈現中長線弱勢。不建議在此刻進場「接刀」，應等待股價不再破低，或重新站回季線後再行評估。`);
     } else {
-      advice.push(`<strong>多頭拉回偏多：</strong> 現價穩居季線上方，回測未破均線前中長線多方架構未遭破壞。`);
+      advice.push(`<strong>📈 長線多頭有撐：</strong> 目前股價距離季線仍有安全空間，長線多方架構未被破壞，可繼續抱股。`);
     }
 
+    // 短線位階判斷 (5MA / 20MA)
     if (isBelowMa5) {
-      advice.push(`<strong>右側進場條件：</strong> 短期均線（5MA 約 ${d.ma5} 元）仍壓在上方，短期慣性為弱勢整理。穩健型操作建議等待「出量紅 K 實體站回 5MA」後再行順勢加碼，勝率較高。`);
+      advice.push(`<strong>⏳ 右側進場需等待：</strong> 股價目前被 5 日線（${ma5}）壓制，短期仍有向下慣性。穩健型投資人建議先忍住，等待哪天「收盤帶量站上 5 日線」時，再順勢進場勝率較高。`);
+    } else if (!isBelowMa60 && !isBelowMa20 && !isBelowMa5) {
+      advice.push(`<strong>🔥 強勢多頭格局：</strong> 目前站穩 5日、20日、60日均線之上，短中長線皆強。惟須注意 5 日乖離率若過大（超過 5%~10%）時，可能有短線獲利了結賣壓。`);
     }
 
+    // 渲染到網頁
     advice.forEach(item => {
       const li = document.createElement('li');
       li.innerHTML = item;
       adviceList.appendChild(li);
     });
-  }
 
-  // 初始載入台積電數據
-  analyzeStock();
+    // 顯示結果區塊
+    document.getElementById('resultArea').style.display = "flex";
+  }
 </script>
 
 </body>
